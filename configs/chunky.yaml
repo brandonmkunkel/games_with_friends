@@ -38,27 +38,27 @@ categories:
         points: 500
   - name: On TV
     questions:
-      - question: 
-        answer: 
+      - question: On hit reality show "Summer Lovin'", this activity left audiences hanging
+        answer: Zipline
         points: 100
-      - question: This talk show is hosted by Barch Barley, who be on his phone for hours and hours
-        answer: Barley Tonight
-        points: 200
       - question: Girls over 60lbs are safe to play with this doll which contains a low, low dose of poison
         answer: Tammy Craps
+        points: 200
+      - question: This actor played the lead in Detective Crashmore, a movie described by critics as a "cosmic gumbo"
+        answer: Santa Claus
         points: 300
-      - question: 
-        answer: 
+      - question: This talk show is hosted by Barch Barley, who could be on his phone for hours and hours.
+        answer: Barley Tonight
         points: 400
       - question: This commercial introduced pop hit Moon River Rock to the world
         answer: Laser Spine Specialists
         points: 500
   - name: Corporate America
     questions:
-      - question:
-        answer:
+      - question: You may have issues with employee retention if you schedule meetings during this time. 
+        answer: Lunch
         points: 100
-      - question:
+      - question: 
         answer:
         points: 200
       - question: This car company put together a focus group to learn more about steering wheel preferences
