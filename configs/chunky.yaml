@@ -7,7 +7,7 @@ categories:
       - question: This high-end measnwear brand can be found at the Shops at the Creek
         answer: Dan Flashes
         points: 100
-      - question: These jeans have a size 54 waist, 10 inch legs
+      - question: These jeans may have a 54 inch waist and 10 inch inseam
         answer: Chode Jeans
         points: 200
       - question: Worn by rappers, these jeans have a characteristic spatter dying pattern.
@@ -21,7 +21,7 @@ categories:
         points: 500
   - name: It's Dinner Time
     questions:
-      - question: It's safe to eat paper, but it's not safe to eat
+      - question: It's safe to eat paper, but it's not safe to eat this item
         answer: Mud Pie
         points: 100
       - question: This food item has to be shared equally, you can't just eat all the ones with the meat and cheese
@@ -38,17 +38,17 @@ categories:
         points: 500
   - name: On TV
     questions:
-      - question: On hit reality show "Summer Lovin'", this activity left audiences hanging
+      - question: On hit reality show "Summer Loving", this activity left audiences hanging
         answer: Zipline
         points: 100
+      - question: Spectrum is planning to drop Corncob TV, which hosts this hit show
+        answer: Coffin Flop
+        points: 200
       - question: Girls over 60lbs are safe to play with this doll which contains a low, low dose of poison
         answer: Tammy Craps
-        points: 200
+        points: 300
       - question: This actor played the lead in Detective Crashmore, a movie described by critics as a "cosmic gumbo"
         answer: Santa Claus
-        points: 300
-      - question: This talk show is hosted by Barch Barley, who could be on his phone for hours and hours.
-        answer: Barley Tonight
         points: 400
       - question: This commercial introduced pop hit Moon River Rock to the world
         answer: Laser Spine Specialists
@@ -58,8 +58,8 @@ categories:
       - question: You may have issues with employee retention if you schedule meetings during this time. 
         answer: Lunch
         points: 100
-      - question: 
-        answer:
+      - question: Upgrading this piece of office equipment will make your employees say "Santa came early"
+        answer: Copier
         points: 200
       - question: This car company put together a focus group to learn more about steering wheel preferences
         answer: Ford
@@ -67,23 +67,24 @@ categories:
       - question: 
         answer: 
         points: 400
-      - question: This career may cause distracted driving
+      - question: This high-risk career may cause emotional distress and distracted driving. 
         answer: Tables
         points: 500
-  - name: What did he say?
+  - name: He Did What???
     questions:
-      - question: On the adult ghost tour you can say this one word.  
+      - question: On the adult ghost tour you can say this one word
         answer: Jizz
         points: 100
-      - question:
-        answer:
+      - question: At "Baby of the Year", one of the parents attempted to rig the contest with their own performance of this
+        answer: Oral
         points: 200
-      - question:
-        answer:
+      - question: Darmine Doggy Doors were invented in response to a pig wearing this
+        answer: Richard Nixon Mask
         points: 300
-      - question:
-        answer:
+      - question: This store makes defective watches that explode and ruin your date
+        answer: TK Jewelers
         points: 400
       - question: 
-        answer:
+        answer: 
         points: 500
+      
