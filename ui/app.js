@@ -1,506 +1,578 @@
 // Establish unique player ID using localStorage for session persistence
-let playerId = localStorage.getItem('trivia_player_id');
+let playerId = localStorage.getItem("trivia_player_id");
 if (!playerId) {
-    playerId = 'p_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('trivia_player_id', playerId);
+  playerId = "p_" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("trivia_player_id", playerId);
 }
 
-// Retrieve role from URL params (defaults to player)
+// Retrieve role from URL params or auto-detect based on path and device
 const urlParams = new URLSearchParams(window.location.search);
-let role = urlParams.get('role') || 'player';
+let role = urlParams.get("role");
+if (!role) {
+  if (
+    window.location.pathname.endsWith("/host") ||
+    window.location.pathname.endsWith("/host/")
+  ) {
+    role = "host";
+  } else {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent,
+      );
+    const isSmallScreen = window.innerWidth < 768;
+    role = isMobile || isSmallScreen ? "player" : "screen";
+  }
+}
 
 // State management
 let ws;
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+let lastReceivedState = null;
+const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 const wsUrl = `${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`;
 
 // Setup connections
 function connect() {
-    ws = new WebSocket(wsUrl);
+  ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-        console.log("WebSocket connected");
-        if (role === 'host') {
-            const hostStatus = document.getElementById('host-connection-status');
-            if (hostStatus) {
-                hostStatus.innerText = 'Online';
-                hostStatus.className = 'status-online';
-            }
-        }
-        
-        // Auto-rejoin if player has already set their details
-        const savedName = localStorage.getItem('trivia_player_name');
-        const savedTeam = localStorage.getItem('trivia_player_team');
-        if (role === 'player' && savedName) {
-            send({
-                action: 'join',
-                player_id: playerId,
-                name: savedName,
-                team: savedTeam || ''
-            });
-        }
-    };
+  ws.onopen = () => {
+    console.log("WebSocket connected");
+    if (role === "host") {
+      const hostStatus = document.getElementById("host-connection-status");
+      if (hostStatus) {
+        hostStatus.innerText = "Online";
+        hostStatus.className = "status-online";
+      }
+    }
 
-    ws.onmessage = (event) => {
-        try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'state_update') {
-                updateUI(msg.state);
-            }
-        } catch (err) {
-            console.error("Error parsing message", err);
-        }
-    };
+    // Auto-rejoin if player has already set their details
+    const savedName = localStorage.getItem("trivia_player_name");
+    const savedRoom = localStorage.getItem("trivia_room_code");
+    if (role === "player" && savedName && savedRoom) {
+      send({
+        action: "join",
+        player_id: playerId,
+        name: savedName,
+        room_code: savedRoom,
+      });
+    }
+  };
 
-    ws.onclose = () => {
-        console.log("WebSocket disconnected, reconnecting in 2 seconds...");
-        if (role === 'host') {
-            const hostStatus = document.getElementById('host-connection-status');
-            if (hostStatus) {
-                hostStatus.innerText = 'Offline';
-                hostStatus.className = 'status-offline';
-            }
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "state_update") {
+        lastReceivedState = msg.state;
+        updateUI(msg.state);
+      } else if (msg.type === "error") {
+        alert(msg.message);
+        if (msg.message.includes("Room Code")) {
+          localStorage.removeItem("trivia_room_code");
+          if (lastReceivedState) {
+            // Filter out my registration so it defaults to setup view
+            lastReceivedState.players = lastReceivedState.players.filter(
+              (p) => p.id !== playerId,
+            );
+            updateUI(lastReceivedState);
+          }
         }
-        setTimeout(connect, 2000);
-    };
+      }
+    } catch (err) {
+      console.error("Error parsing message", err);
+    }
+  };
 
-    ws.onerror = (err) => {
-        console.error("WebSocket error:", err);
-    };
+  ws.onclose = () => {
+    console.log("WebSocket disconnected, reconnecting in 2 seconds...");
+    if (role === "host") {
+      const hostStatus = document.getElementById("host-connection-status");
+      if (hostStatus) {
+        hostStatus.innerText = "Offline";
+        hostStatus.className = "status-offline";
+      }
+    }
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("WebSocket error:", err);
+  };
 }
 
 function send(data) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(data));
-    } else {
-        console.warn("WebSocket not connected. Failed to send:", data);
-    }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  } else {
+    console.warn("WebSocket not connected. Failed to send:", data);
+  }
 }
 
 // UI Router / Layout Coordinator
 function updateUI(state) {
-    // Hide all main wrappers first
-    document.getElementById('view-screen').classList.add('hidden');
-    document.getElementById('view-player').classList.add('hidden');
-    document.getElementById('view-host').classList.add('hidden');
+  // Hide all main wrappers first
+  document.getElementById("view-screen").classList.add("hidden");
+  document.getElementById("view-player").classList.add("hidden");
+  document.getElementById("view-host").classList.add("hidden");
 
-    if (role === 'screen') {
-        document.getElementById('view-screen').classList.remove('hidden');
-        renderScreen(state);
-    } else if (role === 'host') {
-        document.getElementById('view-host').classList.remove('hidden');
-        renderHost(state);
-    } else {
-        document.getElementById('view-player').classList.remove('hidden');
-        renderPlayer(state);
-    }
+  if (role === "screen") {
+    document.getElementById("view-screen").classList.remove("hidden");
+    renderScreen(state);
+  } else if (role === "host") {
+    document.getElementById("view-host").classList.remove("hidden");
+    renderHost(state);
+  } else {
+    document.getElementById("view-player").classList.remove("hidden");
+    renderPlayer(state);
+  }
 }
 
 /* ==================== SCREEN RENDERING LOGIC ==================== */
 function renderScreen(state) {
-    // Hide all sub-sections
-    document.getElementById('screen-lobby').classList.add('hidden');
-    document.getElementById('screen-board').classList.add('hidden');
-    document.getElementById('screen-question').classList.add('hidden');
-    document.getElementById('screen-ended').classList.add('hidden');
+  // Hide all sub-sections
+  document.getElementById("screen-lobby").classList.add("hidden");
+  document.getElementById("screen-board").classList.add("hidden");
+  document.getElementById("screen-question").classList.add("hidden");
+  document.getElementById("screen-ended").classList.add("hidden");
 
-    if (state.status === 'lobby') {
-        document.getElementById('screen-lobby').classList.remove('hidden');
-        document.getElementById('screen-join-url').innerText = `${window.location.protocol}//${window.location.host}/ui/index.html`;
-        document.getElementById('screen-game-name').innerText = state.name;
-        
-        const connectedPlayers = state.players || [];
-        document.getElementById('screen-player-count').innerText = connectedPlayers.length;
-        
-        const list = document.getElementById('screen-players-list');
-        list.innerHTML = '';
-        connectedPlayers.forEach(p => {
-            const li = document.createElement('li');
-            li.className = 'player-card' + (p.connected ? '' : ' disconnected');
-            li.innerHTML = `${p.name} ${p.team ? `<span class="team-name">${p.team}</span>` : ''}`;
-            list.appendChild(li);
-        });
-    } 
-    
-    else if (state.status === 'board') {
-        document.getElementById('screen-board').classList.remove('hidden');
-        document.getElementById('screen-board-game-name').innerText = state.name;
-        
-        // Render Scores bar
-        renderScoresBar(document.getElementById('screen-board-scores'), state.players);
-        
-        // Render Jeopardy Grid
-        const grid = document.getElementById('screen-jeopardy-grid');
-        renderJeopardyGrid(grid, state, false);
-    } 
-    
-    else if (state.status === 'question' || state.status === 'buzzed' || state.status === 'revealed') {
-        document.getElementById('screen-question').classList.remove('hidden');
-        
-        const q = state.current_question;
-        if (q) {
-            // Find category name
-            let catName = "Trivia";
-            state.categories.forEach(c => {
-                if (c.questions.some(item => item.id === q.id)) {
-                    catName = c.name;
-                }
-            });
-            
-            document.getElementById('screen-question-category').innerText = catName;
-            document.getElementById('screen-question-points').innerText = `${q.points} Points`;
-            document.getElementById('screen-question-text').innerText = q.question;
-        }
+  if (state.status === "lobby") {
+    document.getElementById("screen-lobby").classList.remove("hidden");
+    document.getElementById("screen-join-url").innerText =
+      `${window.location.protocol}//${window.location.host}/join`;
+    document.getElementById("screen-room-code").innerText =
+      state.room_code || "----";
+    document.getElementById("screen-game-name").innerText = state.name;
 
-        // Handle Buzz overlays
-        const buzzOverlay = document.getElementById('screen-buzzed-overlay');
-        if (state.status === 'buzzed' && state.current_buzzer) {
-            buzzOverlay.classList.remove('hidden');
-            const buzzerPlayer = state.players.find(p => p.id === state.current_buzzer);
-            document.getElementById('screen-buzzer-player-name').innerText = buzzerPlayer ? buzzerPlayer.name : "Someone";
-        } else {
-            buzzOverlay.classList.add('hidden');
-        }
+    const connectedPlayers = state.players || [];
+    document.getElementById("screen-player-count").innerText =
+      connectedPlayers.length;
 
-        // Handle Answer overlay
-        const answerOverlay = document.getElementById('screen-answer-overlay');
-        if (state.status === 'revealed' && q) {
-            answerOverlay.classList.remove('hidden');
-            document.getElementById('screen-answer-text').innerText = q.answer;
-        } else {
-            answerOverlay.classList.add('hidden');
+    const list = document.getElementById("screen-players-list");
+    list.innerHTML = "";
+    connectedPlayers.forEach((p) => {
+      const li = document.createElement("li");
+      li.className = "player-card" + (p.connected ? "" : " disconnected");
+      li.innerHTML = p.name;
+      list.appendChild(li);
+    });
+  } else if (state.status === "board") {
+    document.getElementById("screen-board").classList.remove("hidden");
+    document.getElementById("screen-board-game-name").innerText = state.name;
+
+    // Render Scores bar
+    renderScoresBar(
+      document.getElementById("screen-board-scores"),
+      state.players,
+    );
+
+    // Render Jeopardy Grid
+    const grid = document.getElementById("screen-jeopardy-grid");
+    renderJeopardyGrid(grid, state, false);
+  } else if (
+    state.status === "question" ||
+    state.status === "buzzed" ||
+    state.status === "revealed"
+  ) {
+    document.getElementById("screen-question").classList.remove("hidden");
+
+    const q = state.current_question;
+    if (q) {
+      // Find category name
+      let catName = "Trivia";
+      state.categories.forEach((c) => {
+        if (c.questions.some((item) => item.id === q.id)) {
+          catName = c.name;
         }
-        
-        // Render scores footer
-        renderScoresBar(document.getElementById('screen-question-scores'), state.players);
-    } 
-    
-    else if (state.status === 'ended') {
-        document.getElementById('screen-ended').classList.remove('hidden');
-        const standings = document.getElementById('screen-final-standings');
-        standings.innerHTML = '';
-        
-        // Sort players by score
-        const sortedPlayers = [...state.players].sort((a,b) => b.score - a.score);
-        sortedPlayers.forEach((p, idx) => {
-            const item = document.createElement('div');
-            item.className = 'standing-item';
-            item.innerHTML = `
+      });
+
+      document.getElementById("screen-question-category").innerText = catName;
+      document.getElementById("screen-question-points").innerText =
+        `${q.points} Points`;
+      document.getElementById("screen-question-text").innerText = q.question;
+    }
+
+    // Handle Buzz overlays
+    const buzzOverlay = document.getElementById("screen-buzzed-overlay");
+    if (state.status === "buzzed" && state.current_buzzer) {
+      buzzOverlay.classList.remove("hidden");
+      const buzzerPlayer = state.players.find(
+        (p) => p.id === state.current_buzzer,
+      );
+      document.getElementById("screen-buzzer-player-name").innerText =
+        buzzerPlayer ? buzzerPlayer.name : "Someone";
+    } else {
+      buzzOverlay.classList.add("hidden");
+    }
+
+    // Handle Answer overlay
+    const answerOverlay = document.getElementById("screen-answer-overlay");
+    if (state.status === "revealed" && q) {
+      answerOverlay.classList.remove("hidden");
+      document.getElementById("screen-answer-text").innerText = q.answer;
+    } else {
+      answerOverlay.classList.add("hidden");
+    }
+
+    // Render scores footer
+    renderScoresBar(
+      document.getElementById("screen-question-scores"),
+      state.players,
+    );
+  } else if (state.status === "ended") {
+    document.getElementById("screen-ended").classList.remove("hidden");
+    const standings = document.getElementById("screen-final-standings");
+    standings.innerHTML = "";
+
+    // Sort players by score
+    const sortedPlayers = [...state.players].sort((a, b) => b.score - a.score);
+    sortedPlayers.forEach((p, idx) => {
+      const item = document.createElement("div");
+      item.className = "standing-item";
+      item.innerHTML = `
                 <div>
                     <span class="standing-rank">#${idx + 1}</span>
-                    <span>${p.name} ${p.team ? `<small>(${p.team})</small>` : ''}</span>
+                    <span>${p.name}</span>
                 </div>
                 <div class="glow-text">${p.score} pts</div>
             `;
-            standings.appendChild(item);
-        });
-    }
+      standings.appendChild(item);
+    });
+  }
 }
 
 // Helpers for Screen rendering
 function renderScoresBar(container, players) {
-    container.innerHTML = '';
-    const sorted = [...players].sort((a,b) => b.score - a.score);
-    sorted.forEach(p => {
-        const badge = document.createElement('div');
-        badge.className = 'score-badge' + (p.connected ? '' : ' disconnected');
-        badge.innerHTML = `${p.name}: <span class="score-val">${p.score}</span>`;
-        container.appendChild(badge);
-    });
+  container.innerHTML = "";
+  const sorted = [...players].sort((a, b) => b.score - a.score);
+  sorted.forEach((p) => {
+    const badge = document.createElement("div");
+    badge.className = "score-badge" + (p.connected ? "" : " disconnected");
+    badge.innerHTML = `${p.name}: <span class="score-val">${p.score}</span>`;
+    container.appendChild(badge);
+  });
 }
 
 function renderJeopardyGrid(gridContainer, state, isHostMode) {
-    gridContainer.innerHTML = '';
-    
-    state.categories.forEach(cat => {
-        const col = document.createElement('div');
-        col.className = 'grid-category';
-        
-        const catHeader = document.createElement('div');
-        catHeader.className = 'category-name-card';
-        catHeader.innerText = cat.name;
-        col.appendChild(catHeader);
-        
-        cat.questions.forEach(q => {
-            const card = document.createElement('div');
-            card.className = 'question-point-card' + (q.completed ? ' completed' : '');
-            card.innerText = q.completed ? '' : `$${q.points}`;
-            
-            if (isHostMode && !q.completed && state.status === 'board') {
-                card.addEventListener('click', () => {
-                    send({ action: 'select_question', question_id: q.id });
-                });
-            }
-            col.appendChild(card);
-        });
-        
-        gridContainer.appendChild(col);
-    });
-}
+  gridContainer.innerHTML = "";
 
+  state.categories.forEach((cat) => {
+    const col = document.createElement("div");
+    col.className = "grid-category";
+
+    const catHeader = document.createElement("div");
+    catHeader.className = "category-name-card";
+    catHeader.innerText = cat.name;
+    col.appendChild(catHeader);
+
+    cat.questions.forEach((q) => {
+      const card = document.createElement("div");
+      card.className =
+        "question-point-card" + (q.completed ? " completed" : "");
+      card.innerText = q.completed ? "" : `$${q.points}`;
+
+      if (isHostMode && !q.completed && state.status === "board") {
+        card.addEventListener("click", () => {
+          send({ action: "select_question", question_id: q.id });
+        });
+      }
+      col.appendChild(card);
+    });
+
+    gridContainer.appendChild(col);
+  });
+}
 
 /* ==================== PLAYER RENDERING LOGIC ==================== */
 function renderPlayer(state) {
-    const me = state.players.find(p => p.id === playerId);
-    
-    // Switch views depending on registration
-    if (!me) {
-        showPlayerSection('player-setup');
-        return;
+  const me = state.players.find((p) => p.id === playerId);
+
+  // Switch views depending on registration
+  if (!me) {
+    showPlayerSection("player-setup");
+
+    // Prefill name and room code if available in localStorage
+    const savedName = localStorage.getItem("trivia_player_name");
+    const savedRoom = localStorage.getItem("trivia_room_code");
+
+    const nameInput = document.getElementById("player-name-input");
+    const roomInput = document.getElementById("player-room-input");
+
+    if (savedName && nameInput && nameInput.value === "") {
+      nameInput.value = savedName;
     }
-    
-    // Save to sync
-    localStorage.setItem('trivia_player_name', me.name);
-    localStorage.setItem('trivia_player_team', me.team || '');
-
-    // Common player state panel updates
-    const myScoreText = document.getElementById('player-my-score');
-    if (myScoreText) myScoreText.innerText = me.score;
-    
-    const myNameText = document.getElementById('player-my-name');
-    if (myNameText) myNameText.innerText = me.name;
-    
-    const myTeamText = document.getElementById('player-my-team');
-    if (myTeamText) myTeamText.innerText = me.team ? `Team: ${me.team}` : '';
-
-    // Route states
-    if (state.status === 'lobby') {
-        showPlayerSection('player-lobby');
-        document.getElementById('player-lobby-count').innerText = state.players.length;
-    } 
-    
-    else if (state.status === 'board') {
-        showPlayerSection('player-board');
-    } 
-    
-    else if (state.status === 'question') {
-        showPlayerSection('player-question');
-        
-        const q = state.current_question;
-        let catName = "Jeopardy";
-        if (q) {
-            state.categories.forEach(c => {
-                if (c.questions.some(item => item.id === q.id)) {
-                    catName = c.name;
-                }
-            });
-            document.getElementById('player-q-category').innerText = catName;
-            document.getElementById('player-q-points').innerText = `${q.points} pts`;
-        }
-
-        const buzzBtn = document.getElementById('player-buzz-btn');
-        const statusMsg = document.getElementById('player-status-message');
-        
-        const hasBuzzedIncorrectly = state.buzzed_players.includes(playerId);
-        if (hasBuzzedIncorrectly) {
-            buzzBtn.disabled = true;
-            statusMsg.innerText = "Locked out (Incorrect answer submitted).";
-        } else {
-            buzzBtn.disabled = false;
-            statusMsg.innerText = "Buzz in when you know it!";
-        }
-    } 
-    
-    else if (state.status === 'buzzed') {
-        if (state.current_buzzer === playerId) {
-            showPlayerSection('player-buzzed');
-            document.getElementById('player-buzz-title').innerText = "YOUR BUZZ!";
-            document.getElementById('player-buzz-subtitle').innerText = "State your answer to the host!";
-        } else {
-            // Disable buzzers for others
-            showPlayerSection('player-question');
-            const buzzBtn = document.getElementById('player-buzz-btn');
-            const statusMsg = document.getElementById('player-status-message');
-            buzzBtn.disabled = true;
-            
-            const buzzerPlayer = state.players.find(p => p.id === state.current_buzzer);
-            statusMsg.innerText = buzzerPlayer ? `${buzzerPlayer.name} has buzzed!` : "Buzzed!";
-        }
-    } 
-    
-    else if (state.status === 'revealed') {
-        showPlayerSection('player-revealed');
-        const q = state.current_question;
-        document.getElementById('player-revealed-answer').innerText = q ? q.answer : '...';
-    } 
-    
-    else if (state.status === 'ended') {
-        showPlayerSection('player-ended');
-        document.getElementById('player-final-score').innerText = me.score;
+    if (savedRoom && roomInput && roomInput.value === "") {
+      roomInput.value = savedRoom;
     }
+    return;
+  }
+
+  // Save to sync
+  localStorage.setItem("trivia_player_name", me.name);
+
+  // Common player state panel updates
+  const myScoreText = document.getElementById("player-my-score");
+  if (myScoreText) myScoreText.innerText = me.score;
+
+  const myNameText = document.getElementById("player-my-name");
+  if (myNameText) myNameText.innerText = me.name;
+
+  // Route states
+  if (state.status === "lobby") {
+    showPlayerSection("player-lobby");
+    document.getElementById("player-lobby-count").innerText =
+      state.players.length;
+  } else if (state.status === "board") {
+    showPlayerSection("player-board");
+  } else if (state.status === "question" || state.status === "buzzed") {
+    const q = state.current_question;
+    let catName = "Jeopardy";
+    if (q) {
+      state.categories.forEach((c) => {
+        if (c.questions.some((item) => item.id === q.id)) {
+          catName = c.name;
+        }
+      });
+      const qCategory = document.getElementById("player-q-category");
+      const qPoints = document.getElementById("player-q-points");
+      const qText = document.getElementById("player-q-text");
+      if (qCategory) qCategory.innerText = catName;
+      if (qPoints) qPoints.innerText = `${q.points} pts`;
+      if (qText) qText.innerText = q.question;
+    }
+
+    if (state.status === "question") {
+      showPlayerSection("player-question");
+      const buzzBtn = document.getElementById("player-buzz-btn");
+      const statusMsg = document.getElementById("player-status-message");
+
+      const hasBuzzedIncorrectly = state.buzzed_players.includes(playerId);
+      if (hasBuzzedIncorrectly) {
+        if (buzzBtn) buzzBtn.disabled = true;
+        if (statusMsg)
+          statusMsg.innerText = "Locked out (Incorrect answer submitted).";
+      } else {
+        if (buzzBtn) buzzBtn.disabled = false;
+        if (statusMsg) statusMsg.innerText = "Buzz in when you know it!";
+      }
+    } else if (state.status === "buzzed") {
+      if (state.current_buzzer === playerId) {
+        showPlayerSection("player-buzzed");
+        document.getElementById("player-buzz-title").innerText = "YOUR BUZZ!";
+        document.getElementById("player-buzz-subtitle").innerText =
+          "State your answer to the host!";
+      } else {
+        // Disable buzzers for others
+        showPlayerSection("player-question");
+        const buzzBtn = document.getElementById("player-buzz-btn");
+        const statusMsg = document.getElementById("player-status-message");
+        if (buzzBtn) buzzBtn.disabled = true;
+
+        const buzzerPlayer = state.players.find(
+          (p) => p.id === state.current_buzzer,
+        );
+        if (statusMsg)
+          statusMsg.innerText = buzzerPlayer
+            ? `${buzzerPlayer.name} has buzzed!`
+            : "Buzzed!";
+      }
+    }
+  } else if (state.status === "revealed") {
+    showPlayerSection("player-revealed");
+    const q = state.current_question;
+    document.getElementById("player-revealed-answer").innerText = q
+      ? q.answer
+      : "...";
+  } else if (state.status === "ended") {
+    showPlayerSection("player-ended");
+    document.getElementById("player-final-score").innerText = me.score;
+  }
 }
 
 function showPlayerSection(sectionId) {
-    const sections = ['player-setup', 'player-lobby', 'player-board', 'player-question', 'player-buzzed', 'player-revealed', 'player-ended'];
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            if (id === sectionId) {
-                el.classList.remove('hidden');
-            } else {
-                el.classList.add('hidden');
-            }
-        }
-    });
+  const sections = [
+    "player-setup",
+    "player-lobby",
+    "player-board",
+    "player-question",
+    "player-buzzed",
+    "player-revealed",
+    "player-ended",
+  ];
+  sections.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (id === sectionId) {
+        el.classList.remove("hidden");
+      } else {
+        el.classList.add("hidden");
+      }
+    }
+  });
 }
-
 
 /* ==================== HOST RENDERING LOGIC ==================== */
 function renderHost(state) {
-    // Hide all sections first
-    const sections = ['host-lobby', 'host-board', 'host-question', 'host-buzzed', 'host-revealed', 'host-ended'];
-    sections.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
+  // Hide all sections first
+  const sections = [
+    "host-lobby",
+    "host-board",
+    "host-question",
+    "host-buzzed",
+    "host-revealed",
+    "host-ended",
+  ];
+  sections.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
 
-    // Render Host Sidebar scoreboard
-    const sidebarScores = document.getElementById('host-sidebar-scores');
-    sidebarScores.innerHTML = '';
-    const sorted = [...state.players].sort((a,b) => b.score - a.score);
-    sorted.forEach(p => {
-        const li = document.createElement('li');
-        li.className = 'sidebar-score-item' + (p.connected ? '' : ' disconnected');
-        li.innerHTML = `<span>${p.name} ${p.team ? `<small>(${p.team})</small>` : ''}</span> <span>${p.score}</span>`;
-        sidebarScores.appendChild(li);
-    });
+  // Render Host Sidebar scoreboard
+  const sidebarScores = document.getElementById("host-sidebar-scores");
+  sidebarScores.innerHTML = "";
+  const sorted = [...state.players].sort((a, b) => b.score - a.score);
+  sorted.forEach((p) => {
+    const li = document.createElement("li");
+    li.className = "sidebar-score-item" + (p.connected ? "" : " disconnected");
+    li.innerHTML = `<span>${p.name}</span> <span>${p.score}</span>`;
+    sidebarScores.appendChild(li);
+  });
 
-    if (state.status === 'lobby') {
-        document.getElementById('host-lobby').classList.remove('hidden');
-        document.getElementById('host-player-count').innerText = state.players.length;
-        
-        const list = document.getElementById('host-players-list');
-        list.innerHTML = '';
-        state.players.forEach(p => {
-            const li = document.createElement('li');
-            li.className = 'host-player-item';
-            li.innerHTML = `<span>${p.name} ${p.team ? `<small>(${p.team})</small>` : ''}</span> <span>${p.connected ? '🟢' : '🔴'}</span>`;
-            list.appendChild(li);
-        });
-    } 
-    
-    else if (state.status === 'board') {
-        document.getElementById('host-board').classList.remove('hidden');
-        const grid = document.getElementById('host-jeopardy-grid');
-        renderJeopardyGrid(grid, state, true);
-    } 
-    
-    else if (state.status === 'question') {
-        document.getElementById('host-question').classList.remove('hidden');
-        
-        const q = state.current_question;
-        if (q) {
-            let catName = "Trivia";
-            state.categories.forEach(c => {
-                if (c.questions.some(item => item.id === q.id)) {
-                    catName = c.name;
-                }
-            });
-            document.getElementById('host-question-category').innerText = catName;
-            document.getElementById('host-question-points').innerText = `${q.points} Points`;
-            document.getElementById('host-question-text').innerText = q.question;
-            document.getElementById('host-question-answer').innerText = q.answer;
+  if (state.status === "lobby") {
+    document.getElementById("host-lobby").classList.remove("hidden");
+    document.getElementById("host-player-count").innerText =
+      state.players.length;
+
+    const list = document.getElementById("host-players-list");
+    list.innerHTML = "";
+    state.players.forEach((p) => {
+      const li = document.createElement("li");
+      li.className = "host-player-item";
+      li.innerHTML = `<span>${p.name}</span> <span>${p.connected ? "🟢" : "🔴"}</span>`;
+      list.appendChild(li);
+    });
+  } else if (state.status === "board") {
+    document.getElementById("host-board").classList.remove("hidden");
+    const grid = document.getElementById("host-jeopardy-grid");
+    renderJeopardyGrid(grid, state, true);
+  } else if (state.status === "question") {
+    document.getElementById("host-question").classList.remove("hidden");
+
+    const q = state.current_question;
+    if (q) {
+      let catName = "Trivia";
+      state.categories.forEach((c) => {
+        if (c.questions.some((item) => item.id === q.id)) {
+          catName = c.name;
         }
-    } 
-    
-    else if (state.status === 'buzzed') {
-        document.getElementById('host-buzzed').classList.remove('hidden');
-        const buzzerPlayer = state.players.find(p => p.id === state.current_buzzer);
-        document.getElementById('host-buzzer-player-name').innerText = buzzerPlayer ? buzzerPlayer.name : "Someone";
-    } 
-    
-    else if (state.status === 'revealed') {
-        document.getElementById('host-revealed').classList.remove('hidden');
-    } 
-    
-    else if (state.status === 'ended') {
-        document.getElementById('host-ended').classList.remove('hidden');
+      });
+      document.getElementById("host-question-category").innerText = catName;
+      document.getElementById("host-question-points").innerText =
+        `${q.points} Points`;
+      document.getElementById("host-question-text").innerText = q.question;
+      document.getElementById("host-question-answer").innerText = q.answer;
     }
+  } else if (state.status === "buzzed") {
+    document.getElementById("host-buzzed").classList.remove("hidden");
+    const buzzerPlayer = state.players.find(
+      (p) => p.id === state.current_buzzer,
+    );
+    document.getElementById("host-buzzer-player-name").innerText = buzzerPlayer
+      ? buzzerPlayer.name
+      : "Someone";
+  } else if (state.status === "revealed") {
+    document.getElementById("host-revealed").classList.remove("hidden");
+  } else if (state.status === "ended") {
+    document.getElementById("host-ended").classList.remove("hidden");
+  }
 }
 
-
 /* ==================== BUTTON EVENT BINDINGS ==================== */
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Setup/Join (Player)
-    const joinBtn = document.getElementById('player-join-btn');
-    if (joinBtn) {
-        joinBtn.addEventListener('click', () => {
-            const name = document.getElementById('player-name-input').value.trim();
-            const team = document.getElementById('player-team-input').value.trim();
-            
-            if (!name) {
-                alert("Please enter your name to join!");
-                return;
-            }
-            
-            localStorage.setItem('trivia_player_name', name);
-            localStorage.setItem('trivia_player_team', team);
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. Setup/Join (Player)
+  const joinBtn = document.getElementById("player-join-btn");
+  if (joinBtn) {
+    joinBtn.addEventListener("click", () => {
+      const roomCode = document
+        .getElementById("player-room-input")
+        .value.trim()
+        .toUpperCase();
+      const name = document.getElementById("player-name-input").value.trim();
 
-            send({
-                action: 'join',
-                player_id: playerId,
-                name: name,
-                team: team
-            });
-        });
-    }
+      if (!roomCode) {
+        alert("Please enter the Room Code shown on the TV screen!");
+        return;
+      }
+      if (!name) {
+        alert("Please enter your name to join!");
+        return;
+      }
 
-    // 2. Buzzer button (Player)
-    const buzzBtn = document.getElementById('player-buzz-btn');
-    if (buzzBtn) {
-        buzzBtn.addEventListener('click', () => {
-            send({ action: 'buzz', player_id: playerId });
-        });
-    }
+      localStorage.setItem("trivia_player_name", name);
+      localStorage.setItem("trivia_room_code", roomCode);
 
-    // 3. Start Game button (Host)
-    const startBtn = document.getElementById('host-start-game-btn');
-    if (startBtn) {
-        startBtn.addEventListener('click', () => {
-            send({ action: 'start_game' });
-        });
-    }
+      send({
+        action: "join",
+        player_id: playerId,
+        name: name,
+        room_code: roomCode,
+      });
+    });
+  }
 
-    // 4. Reveal answer button (Host)
-    const revealBtn = document.getElementById('host-reveal-btn');
-    if (revealBtn) {
-        revealBtn.addEventListener('click', () => {
-            send({ action: 'reveal_answer' });
-        });
-    }
+  // 2. Buzzer button (Player)
+  const buzzBtn = document.getElementById("player-buzz-btn");
+  if (buzzBtn) {
+    buzzBtn.addEventListener("click", () => {
+      send({ action: "buzz", player_id: playerId });
+    });
+  }
 
-    // 5. Correct answer button (Host)
-    const correctBtn = document.getElementById('host-correct-btn');
-    if (correctBtn) {
-        correctBtn.addEventListener('click', () => {
-            send({ action: 'mark_answer', correct: true });
-        });
-    }
+  // 3. Start Game button (Host)
+  const startBtn = document.getElementById("host-start-game-btn");
+  if (startBtn) {
+    startBtn.addEventListener("click", () => {
+      send({ action: "start_game" });
+    });
+  }
 
-    // 6. Incorrect answer button (Host)
-    const incorrectBtn = document.getElementById('host-incorrect-btn');
-    if (incorrectBtn) {
-        incorrectBtn.addEventListener('click', () => {
-            send({ action: 'mark_answer', correct: false });
-        });
-    }
+  // 4. Reveal answer button (Host)
+  const revealBtn = document.getElementById("host-reveal-btn");
+  if (revealBtn) {
+    revealBtn.addEventListener("click", () => {
+      send({ action: "reveal_answer" });
+    });
+  }
 
-    // 7. Next Question/Return to Board (Host)
-    const nextBtn = document.getElementById('host-next-btn');
-    if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-            send({ action: 'next_question' });
-        });
-    }
+  // 5. Correct answer button (Host)
+  const correctBtn = document.getElementById("host-correct-btn");
+  if (correctBtn) {
+    correctBtn.addEventListener("click", () => {
+      send({ action: "mark_answer", correct: true });
+    });
+  }
 
-    // 8. Restart button (Host)
-    const restartBtn = document.getElementById('host-restart-btn');
-    if (restartBtn) {
-        restartBtn.addEventListener('click', () => {
-            send({ action: 'restart_game' });
-        });
-    }
+  // 6. Incorrect answer button (Host)
+  const incorrectBtn = document.getElementById("host-incorrect-btn");
+  if (incorrectBtn) {
+    incorrectBtn.addEventListener("click", () => {
+      send({ action: "mark_answer", correct: false });
+    });
+  }
 
-    // Initialize Connection
-    connect();
+  // 7. Next Question/Return to Board (Host)
+  const nextBtn = document.getElementById("host-next-btn");
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      send({ action: "next_question" });
+    });
+  }
+
+  // 8. Restart button (Host)
+  const restartBtn = document.getElementById("host-restart-btn");
+  if (restartBtn) {
+    restartBtn.addEventListener("click", () => {
+      send({ action: "restart_game" });
+    });
+  }
+
+  // Initialize Connection
+  connect();
 });

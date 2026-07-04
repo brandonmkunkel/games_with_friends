@@ -1,18 +1,26 @@
+import random
+
 from src.config import load_game_config
 from src.models import GameState, Player, Question
+
+
+def generate_room_code() -> str:
+    """Generates a random 4-character alphanumeric room code."""
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(random.choices(chars, k=4))
 
 
 class GameManager:
     def __init__(self, config_path: str):
         self.config_path = config_path
         self.state: GameState = load_game_config(config_path)
+        self.state.room_code = generate_room_code()
 
-    def join_player(self, player_id: str, name: str, team: str | None = None) -> Player:
+    def join_player(self, player_id: str, name: str) -> Player:
         """Adds a player to the lobby, or reconnects an existing player."""
         existing = self.get_player(player_id)
         if existing:
             existing.name = name
-            existing.team = team
             existing.connected = True
             return existing
 
@@ -23,7 +31,7 @@ class GameManager:
             name = f"{base_name} ({suffix})"
             suffix += 1
 
-        new_player = Player(id=player_id, name=name, team=team, score=0, connected=True)
+        new_player = Player(id=player_id, name=name, score=0, connected=True)
         self.state.players.append(new_player)
         return new_player
 
@@ -164,6 +172,7 @@ class GameManager:
 
         self.state = fresh_state
         self.state.players = players
+        self.state.room_code = generate_room_code()
         self.state.status = "lobby"
         return True
 

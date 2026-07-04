@@ -637,6 +637,26 @@ body {
     margin-bottom: 30px;
 }
 
+.player-question-body {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-question-text {
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-main);
+}
+
 .buzzer-container {
     display: flex;
     justify-content: center;

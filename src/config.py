@@ -14,22 +14,15 @@ def load_game_config(config_path: str) -> GameState:
         for q_idx, q_data in enumerate(cat_data.get("questions", [])):
             q_id = f"q_{cat_idx}_{q_idx}"
             question = Question(
-                id=q_id,
-                question=q_data["question"],
-                answer=q_data["answer"],
-                points=q_data["points"],
-                completed=False
+                id=q_id, question=q_data["question"], answer=q_data["answer"], points=q_data["points"], completed=False
             )
             questions.append(question)
-        category = Category(
-            name=cat_data["name"],
-            questions=questions
-        )
+        category = Category(name=cat_data["name"], questions=questions)
         categories.append(category)
 
     return GameState(
         name=data.get("name", "Trivia"),
         game_type=data.get("game_type", "jeopardy"),
         categories=categories,
-        status="lobby"
+        status="lobby",
     )

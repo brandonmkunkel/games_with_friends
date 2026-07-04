@@ -11,6 +11,7 @@ def game_mgr():
     config_path = os.path.join(os.path.dirname(__file__), "..", "configs", "chunky.yaml")
     return GameManager(config_path)
 
+
 def test_initial_state(game_mgr):
     assert game_mgr.state.name == "Chunky"
     assert game_mgr.state.game_type == "jeopardy"
@@ -18,24 +19,24 @@ def test_initial_state(game_mgr):
     assert len(game_mgr.state.categories) == 5
     assert len(game_mgr.state.categories[0].questions) == 5
 
+
 def test_player_join(game_mgr):
     # Join player 1
-    p1 = game_mgr.join_player("p1", "Alice", "Team A")
+    p1 = game_mgr.join_player("p1", "Alice")
     assert p1.id == "p1"
     assert p1.name == "Alice"
-    assert p1.team == "Team A"
     assert len(game_mgr.state.players) == 1
 
-    # Reconnect player 1 with new team and name
-    p1_reconnect = game_mgr.join_player("p1", "Alice Reborn", "Team B")
+    # Reconnect player 1 with name
+    p1_reconnect = game_mgr.join_player("p1", "Alice Reborn")
     assert p1_reconnect.id == "p1"
     assert p1_reconnect.name == "Alice Reborn"
-    assert p1_reconnect.team == "Team B"
     assert len(game_mgr.state.players) == 1
 
     # Prevent duplicate name for connected players
-    p2 = game_mgr.join_player("p2", "Alice Reborn", "Team C")
+    p2 = game_mgr.join_player("p2", "Alice Reborn")
     assert p2.name == "Alice Reborn (1)"
+
 
 def test_game_flow(game_mgr):
     # Join players
@@ -47,7 +48,7 @@ def test_game_flow(game_mgr):
     assert game_mgr.state.status == "board"
 
     # Select question
-    q_id = "q_0_0" # First question of first category (points: 100)
+    q_id = "q_0_0"  # First question of first category (points: 100)
     assert game_mgr.select_question(q_id) is True
     assert game_mgr.state.status == "question"
     assert game_mgr.state.current_question_id == q_id
@@ -74,6 +75,7 @@ def test_game_flow(game_mgr):
     assert game_mgr.get_player("p2").score == 100
     assert game_mgr.state.status == "board"
     assert game_mgr.get_question(q_id).completed is True
+
 
 def test_reveal_answer(game_mgr):
     game_mgr.join_player("p1", "Alice")
