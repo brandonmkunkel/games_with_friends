@@ -1,0 +1,7 @@
+[project]
+name = "trivia-with-friends"
+version = "0.1.0"
+description = "A phone-based trivia server"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
