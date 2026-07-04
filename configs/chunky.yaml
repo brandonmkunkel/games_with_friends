@@ -4,16 +4,16 @@ description: I Think You Should Leave Trivia
 categories:
   - name: Fashion Police
     questions:
-      - question: This high-end measnwear brand can be found at the Shops at the Creek
+      - question: This high-end menswear brand can be found at the Shops at the Creek
         answer: Dan Flashes
         points: 100
       - question: These jeans may have a 54 inch waist and 10 inch inseam
         answer: Chode Jeans
         points: 200
-      - question: Worn by rappers, these jeans have a characteristic spatter dying pattern.
+      - question: Worn by rappers, these jeans have a characteristic spatter pattern.
         answer: Calico Cut Pants
         points: 300
-      - question: This shirt, not a joke, is designed for men whose shirts get wrecked from being adjusted
+      - question: This shirt, not a joke, is designed for men whose shirts get stuck on their bellies
         answer: TC Tuggers
         points: 400
       - question: This hat adorned the heads of mobsters in this year's hot new Gangster movie
@@ -55,7 +55,7 @@ categories:
         points: 500
   - name: Corporate America
     questions:
-      - question: You may have issues with employee retention if you schedule meetings during this time. 
+      - question: You may have issues with employee retention if you schedule meetings during this time.
         answer: Lunch
         points: 100
       - question: Upgrading this piece of office equipment will make your employees say "Santa came early"
@@ -64,10 +64,11 @@ categories:
       - question: This car company put together a focus group to learn more about steering wheel preferences
         answer: Ford
         points: 300
-      - question: 
-        answer: 
+      - question: IT'S A CHUNKY
+        answer: HE IS GOBBLING UP YOUR POINTS
         points: 400
-      - question: This high-risk career may cause emotional distress and distracted driving. 
+        actual_points: -400
+      - question: This high-risk career may cause emotional distress and distracted driving.
         answer: Tables
         points: 500
   - name: He Did What???
@@ -84,7 +85,6 @@ categories:
       - question: This store makes defective watches that explode and ruin your date
         answer: TK Jewelers
         points: 400
-      - question: 
-        answer: 
+      - question: Kim Kardashian's head fell off at this popular club
+        answer: Club Aqua
         points: 500
-      
