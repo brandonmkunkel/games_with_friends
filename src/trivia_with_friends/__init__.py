@@ -1,1 +1,0 @@
-"""Trivia with Friends package."""

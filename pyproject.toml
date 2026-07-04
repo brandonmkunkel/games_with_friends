@@ -1,7 +1,7 @@
 [project]
-name = "trivia-with-friends"
+name = "games-with-friends"
 version = "0.1.0"
-description = "A phone-based trivia server"
+description = "A python game server designed for local play with multiple players"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn>=0.50.0",
     "pydantic>=2.13.4",
     "ruff>=0.15.12",
+    "websockets>=16.0",
 ]
 
 [dependency-groups]
