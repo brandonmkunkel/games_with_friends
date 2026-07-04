@@ -1,0 +1,18 @@
+line-length = 120
+indent-width = 4
+
+[lint]
+# Enable Pyflakes (`F`), pycodestyle (`E`, `W`), isort (`I`), 
+# pyupgrade (`UP`), and flake8-bugbear (`B`).
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = []
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

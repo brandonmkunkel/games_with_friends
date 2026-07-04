@@ -1,6 +1,4 @@
-def main():
-    print("Hello from trivia-with-friends!")
-
+import uvicorn
 
 if __name__ == "__main__":
-    main()
+    uvicorn.run("src.trivia_with_friends.app:app", port=8080, reload=True)
