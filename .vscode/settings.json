@@ -13,6 +13,9 @@
     "[javascript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+    },
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.codeActionsOnSave": {
@@ -20,5 +23,12 @@
             "source.organizeImports": "explicit"
         }
     },
-    "[markdown]": {},
+    "[yaml]": {
+        "editor.tabSize": 2,
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
 }
