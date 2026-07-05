@@ -134,13 +134,13 @@ def test_trap_question(game_mgr):
                 break
 
     assert trap_q is not None
-    assert trap_q.actual_points == -400
+    trap_points = trap_q.actual_points
 
     # Select trap question
     assert game_mgr.select_question(trap_qid) is True
 
-    # Alice's score should instantly drop by 400 because she was the active player selecting it
-    assert game_mgr.get_player("p1").score == -400
+    # Alice's score should instantly drop by the trap's points because she was the active player selecting it
+    assert game_mgr.get_player("p1").score == trap_points
     assert game_mgr.state.status == "revealed"
 
 

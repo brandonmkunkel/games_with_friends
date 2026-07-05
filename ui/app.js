@@ -417,7 +417,7 @@ function renderScreen(state) {
 // Helpers for Screen rendering
 function renderScoresBar(container, players) {
   container.innerHTML = "";
-  const sorted = [...players].sort((a, b) => b.score - a.score);
+  const sorted = [...players].sort((a, b) => b.score - a.score).slice(0, 5);
   sorted.forEach((p) => {
     const badge = document.createElement("div");
     badge.className = "score-badge" + (p.connected ? "" : " disconnected");

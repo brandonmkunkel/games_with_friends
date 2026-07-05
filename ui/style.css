@@ -301,6 +301,7 @@ body {
 .scores-bar {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .score-badge {
@@ -496,6 +497,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 30px;
+  flex-wrap: wrap;
   border-top: 2px solid var(--border-glass);
   padding-top: 30px;
 }
