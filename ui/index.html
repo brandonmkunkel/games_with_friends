@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trivia with Friends</title>
+    <title>Games with Friends</title>
     <!-- Premium Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
+    <!-- Confetti canvas overlay -->
+    <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
     <div id="app" class="app-container">
       <!-- ==================== SCREEN (TV) VIEW ==================== -->
       <div id="view-screen" class="role-view hidden">
@@ -61,6 +63,17 @@
             <h1 class="game-title-small" id="screen-board-game-name">Trivia</h1>
             <div class="scores-bar" id="screen-board-scores"></div>
           </div>
+          <div
+            id="screen-board-status"
+            class="board-status-message glow-text"
+            style="
+              text-align: center;
+              margin: 15px 0;
+              font-size: 1.8rem;
+              font-weight: 600;
+              color: var(--accent);
+            "
+          ></div>
           <div class="jeopardy-grid-container">
             <div id="screen-jeopardy-grid" class="jeopardy-grid"></div>
           </div>
@@ -175,7 +188,9 @@
               Your Score: <span id="player-my-score" class="glow-text">0</span>
             </div>
             <h3>Look at the TV Screen!</h3>
-            <p>The host is choosing a question from the board.</p>
+            <p id="player-board-status">
+              The host is choosing a question from the board.
+            </p>
           </div>
         </div>
 
@@ -222,12 +237,42 @@
         <!-- Player Ended State -->
         <div id="player-ended" class="state-section hidden">
           <div class="player-panel-card text-center">
-            <h2>Game Finished!</h2>
-            <div class="final-score-box">
-              <p>Your Final Score:</p>
-              <h1 id="player-final-score" class="glow-text">0</h1>
+            <div id="player-ended-normal" class="hidden">
+              <h2>Game Finished!</h2>
+              <div class="final-score-box">
+                <p>Your Final Score:</p>
+                <h1 id="player-final-score" class="glow-text">0</h1>
+              </div>
+              <p>Check the TV for final standings.</p>
             </div>
-            <p>Check the TV for final standings.</p>
+            <div id="player-ended-winner" class="hidden">
+              <h1
+                class="winner-title glow-text-gold animate-bounce"
+                style="font-size: 2.2rem; margin-bottom: 20px"
+              >
+                🏆 YOU WIN! 🏆
+              </h1>
+              <div
+                class="final-score-box gold-border"
+                style="
+                  margin: 20px 0;
+                  padding: 20px;
+                  background: rgba(255, 215, 0, 0.05);
+                "
+              >
+                <p
+                  id="player-winner-msg"
+                  style="
+                    font-size: 1.6rem;
+                    font-weight: 800;
+                    margin: 0;
+                    color: #ffd700;
+                    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+                  "
+                ></p>
+              </div>
+              <p>Congratulations on your victory!</p>
+            </div>
           </div>
         </div>
 
@@ -331,6 +376,61 @@
                 buzzed in!
               </div>
 
+              <!-- Correct answer and question preview for the host -->
+              <div
+                class="question-preview-box"
+                style="
+                  margin: 20px 0;
+                  padding: 15px;
+                  background: rgba(255, 255, 255, 0.05);
+                  border-radius: 8px;
+                  border-left: 4px solid var(--accent);
+                "
+              >
+                <h4
+                  style="
+                    margin: 0 0 5px 0;
+                    color: var(--accent);
+                    text-align: left;
+                    font-size: 1rem;
+                    text-transform: uppercase;
+                  "
+                >
+                  Question:
+                </h4>
+                <p
+                  id="host-buzzed-question-text"
+                  style="
+                    font-size: 1.1rem;
+                    margin: 0 0 15px 0;
+                    font-weight: 600;
+                    text-align: left;
+                    line-height: 1.4;
+                  "
+                ></p>
+                <h4
+                  style="
+                    margin: 0 0 5px 0;
+                    color: var(--success);
+                    text-align: left;
+                    font-size: 1rem;
+                    text-transform: uppercase;
+                  "
+                >
+                  Correct Answer:
+                </h4>
+                <p
+                  id="host-buzzed-answer-text"
+                  style="
+                    font-size: 1.1rem;
+                    margin: 0;
+                    font-weight: 600;
+                    text-align: left;
+                    color: var(--text-highlight);
+                  "
+                ></p>
+              </div>
+
               <div class="host-label">Their Answer Status:</div>
               <div class="scoring-actions">
                 <button id="host-correct-btn" class="btn btn-success btn-large">
@@ -396,7 +496,8 @@
       <div class="modal-card">
         <h3 id="custom-confirm-title">Reset Game</h3>
         <p id="custom-confirm-message">
-          Are you sure you want to reset the current game and return to the lobby?
+          Are you sure you want to reset the current game and return to the
+          lobby?
         </p>
         <div class="modal-actions">
           <button id="custom-confirm-cancel-btn" class="btn btn-secondary">

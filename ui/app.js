@@ -5,6 +5,93 @@ if (!playerId) {
   localStorage.setItem("trivia_player_id", playerId);
 }
 
+// Confetti animation variables and functions
+let confettiActive = false;
+let confettiAnimId = null;
+
+function startConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  // Resize canvas to full viewport
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const colors = ["#ffd700", "#ff4500", "#ff00ff", "#00ff00", "#00ffff", "#ffffff", "#ff8c00"];
+  const particles = [];
+  const particleCount = 150;
+
+  for (let i = 0; i < particleCount; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * particleCount,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.random() * 10 - 5,
+      tiltAngleIncremental: Math.random() * 0.07 + 0.02,
+      tiltAngle: 0,
+      speed: Math.random() * 3 + 2
+    });
+  }
+
+  confettiActive = true;
+
+  function draw() {
+    if (!confettiActive) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach((p) => {
+      p.tiltAngle += p.tiltAngleIncremental;
+      p.y += p.speed;
+      p.x += Math.sin(p.tiltAngle) * 0.5;
+      p.tilt = Math.sin(p.tiltAngle - p.r / 2) * 5;
+
+      ctx.beginPath();
+      ctx.lineWidth = p.r;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+      ctx.stroke();
+
+      if (p.y > canvas.height) {
+        p.y = -20;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+
+    confettiAnimId = requestAnimationFrame(draw);
+  }
+
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+  draw();
+
+  window.addEventListener("resize", resizeConfettiCanvas);
+}
+
+function resizeConfettiCanvas() {
+  const canvas = document.getElementById("confetti-canvas");
+  if (canvas) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+}
+
+function stopConfetti() {
+  confettiActive = false;
+  if (confettiAnimId) {
+    cancelAnimationFrame(confettiAnimId);
+    confettiAnimId = null;
+  }
+  const canvas = document.getElementById("confetti-canvas");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  window.removeEventListener("resize", resizeConfettiCanvas);
+}
+
 // Retrieve role from URL params or auto-detect based on path and device
 const urlParams = new URLSearchParams(window.location.search);
 let role = urlParams.get("role");
@@ -124,12 +211,15 @@ function send(data) {
   }
 }
 
-// UI Router / Layout Coordinator
 function updateUI(state) {
   // Hide all main wrappers first
   document.getElementById("view-screen").classList.add("hidden");
   document.getElementById("view-player").classList.add("hidden");
   document.getElementById("view-host").classList.add("hidden");
+
+  if (state.status !== "ended") {
+    stopConfetti();
+  }
 
   if (role === "screen") {
     document.getElementById("view-screen").classList.remove("hidden");
@@ -218,6 +308,21 @@ function renderScreen(state) {
     // Render Jeopardy Grid
     const grid = document.getElementById("screen-jeopardy-grid");
     renderJeopardyGrid(grid, state, false);
+
+    // Show who is choosing a question
+    const boardStatus = document.getElementById("screen-board-status");
+    if (boardStatus) {
+      if (state.active_player_id) {
+        const activePlayer = state.players.find((p) => p.id === state.active_player_id);
+        if (activePlayer) {
+          boardStatus.innerText = `${activePlayer.name} is choosing a question from the board`;
+        } else {
+          boardStatus.innerText = "Host is choosing a question from the board";
+        }
+      } else {
+        boardStatus.innerText = "Host is choosing a question from the board";
+      }
+    }
   } else if (
     state.status === "question" ||
     state.status === "buzzed" ||
@@ -357,21 +462,35 @@ function renderPlayer(state) {
 
   // Switch views depending on registration
   if (!me) {
+    // If the game was reset, or the player is not registered in the game,
+    // clear the saved room code to prevent automatic re-joins.
+    const savedRoom = localStorage.getItem("trivia_room_code");
+    if (savedRoom) {
+      localStorage.removeItem("trivia_room_code");
+    }
+
+    // Force redirection to /$HOST/join if not already there
+    const pathname = window.location.pathname;
+    if (!pathname.endsWith("/join") && !pathname.endsWith("/join/")) {
+      window.location.pathname = "/join";
+      return;
+    }
+
     showPlayerSection("player-setup");
 
-    // Prefill name and room code if available in localStorage
+    // Clear and prefill inputs
     const savedName = localStorage.getItem("trivia_player_name");
-    const savedRoom = localStorage.getItem("trivia_room_code");
-
     const nameInput = document.getElementById("player-name-input");
     const roomInput = document.getElementById("player-room-input");
 
-    if (savedName && nameInput && nameInput.value === "") {
-      nameInput.value = savedName;
+    if (nameInput) {
+      nameInput.value = savedName || "";
     }
-    if (savedRoom && roomInput && roomInput.value === "") {
-      roomInput.value = savedRoom;
+    if (roomInput) {
+      roomInput.value = "";
     }
+    
+    stopConfetti();
     return;
   }
 
@@ -392,6 +511,23 @@ function renderPlayer(state) {
       state.players.length;
   } else if (state.status === "board") {
     showPlayerSection("player-board");
+    const playerBoardStatus = document.getElementById("player-board-status");
+    if (playerBoardStatus) {
+      if (state.active_player_id) {
+        const activePlayer = state.players.find((p) => p.id === state.active_player_id);
+        if (activePlayer) {
+          if (activePlayer.id === playerId) {
+            playerBoardStatus.innerText = "You are choosing a question from the board! Tell the host which one you want.";
+          } else {
+            playerBoardStatus.innerText = `${activePlayer.name} is choosing a question from the board`;
+          }
+        } else {
+          playerBoardStatus.innerText = "The host is choosing a question from the board.";
+        }
+      } else {
+        playerBoardStatus.innerText = "The host is choosing a question from the board.";
+      }
+    }
   } else if (state.status === "question" || state.status === "buzzed") {
     const q = state.current_question;
     let catName = "Jeopardy";
@@ -455,7 +591,32 @@ function renderPlayer(state) {
     showPlayerSection("player-results");
   } else if (state.status === "ended") {
     showPlayerSection("player-ended");
-    document.getElementById("player-final-score").innerText = me.score;
+    
+    // Determine the winner
+    const scores = state.players.map((p) => p.score);
+    const maxScore = Math.max(...scores);
+    const isWinner = me.score === maxScore && state.players.length > 0;
+
+    const normalSection = document.getElementById("player-ended-normal");
+    const winnerSection = document.getElementById("player-ended-winner");
+
+    if (isWinner) {
+      if (normalSection) normalSection.classList.add("hidden");
+      if (winnerSection) winnerSection.classList.remove("hidden");
+      
+      const winnerMsg = document.getElementById("player-winner-msg");
+      if (winnerMsg) {
+        winnerMsg.innerText = `You are the winner with ${me.score}`;
+      }
+      
+      startConfetti();
+    } else {
+      if (winnerSection) winnerSection.classList.add("hidden");
+      if (normalSection) normalSection.classList.remove("hidden");
+      document.getElementById("player-final-score").innerText = me.score;
+      
+      stopConfetti();
+    }
   }
 }
 
@@ -552,6 +713,15 @@ function renderHost(state) {
     document.getElementById("host-buzzer-player-name").innerText = buzzerPlayer
       ? buzzerPlayer.name
       : "Someone";
+
+    // Show correct answer and question text to host
+    const q = state.current_question;
+    const buzzedQText = document.getElementById("host-buzzed-question-text");
+    const buzzedAText = document.getElementById("host-buzzed-answer-text");
+    if (q) {
+      if (buzzedQText) buzzedQText.innerText = q.question;
+      if (buzzedAText) buzzedAText.innerText = q.answer;
+    }
   } else if (state.status === "revealed") {
     document.getElementById("host-revealed").classList.remove("hidden");
   } else if (state.status === "results") {

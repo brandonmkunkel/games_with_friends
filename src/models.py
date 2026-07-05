@@ -34,3 +34,4 @@ class GameState(BaseModel):
     buzzer_locked: bool = False
     open_buzzer: bool = False
     buzzed_players: list[str] = Field(default_factory=list)  # player IDs who answered incorrectly
+    active_player_id: str | None = None

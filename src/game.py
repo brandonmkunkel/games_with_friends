@@ -50,6 +50,8 @@ class GameManager:
         """Starts the game, transitioning from lobby to the board view."""
         if self.state.status == "lobby":
             self.state.status = "board"
+            if self.state.players:
+                self.state.active_player_id = self.state.players[0].id
             return True
         return False
 
@@ -63,6 +65,21 @@ class GameManager:
             return False
 
         self.state.current_question_id = question_id
+
+        # If it's a trap question (actual_points is negative), apply effect immediately
+        if question.actual_points is not None and question.actual_points < 0:
+            if self.state.active_player_id:
+                active_player = self.get_player(self.state.active_player_id)
+                if active_player:
+                    active_player.score += question.actual_points
+
+            question.completed = True
+            self.state.current_buzzer = None
+            self.state.buzzer_locked = False
+            self.state.buzzed_players = []
+            self.state.status = "revealed"
+            return True
+
         self.state.current_buzzer = None
         self.state.buzzer_locked = False
         self.state.buzzed_players = []
@@ -108,16 +125,12 @@ class GameManager:
 
         if correct:
             question.completed = True
-            self.state.current_question_id = None
+            # Keep current_question_id so frontend can render the question and answer
             self.state.current_buzzer = None
             self.state.buzzer_locked = False
             self.state.buzzed_players = []
-
-            # Check if all questions are completed to auto-end game
-            if self.check_all_completed():
-                self.state.status = "ended"
-            else:
-                self.state.status = "board"
+            self.state.active_player_id = player.id
+            self.state.status = "revealed"
         else:
             self.state.buzzed_players.append(player.id)
             self.state.current_buzzer = None
@@ -179,14 +192,9 @@ class GameManager:
         # Reload configuration
         fresh_state = load_game_config(self.config_path)
 
-        # Keep the existing players, but reset their scores
-        players = []
-        for p in self.state.players:
-            p.score = 0
-            players.append(p)
-
         self.state = fresh_state
-        self.state.players = players
+        self.state.players = []
+        self.state.active_player_id = None
         self.state.room_code = generate_room_code()
         self.state.status = "lobby"
         return True

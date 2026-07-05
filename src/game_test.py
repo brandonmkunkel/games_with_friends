@@ -73,8 +73,12 @@ def test_game_flow(game_mgr):
     # Bob answers correctly
     assert game_mgr.mark_answer(correct=True) is True
     assert game_mgr.get_player("p2").score == 100
-    assert game_mgr.state.status == "board"
+    assert game_mgr.state.status == "revealed"
     assert game_mgr.get_question(q_id).completed is True
+
+    # Host returns to board
+    assert game_mgr.return_to_board() is True
+    assert game_mgr.state.status == "board"
 
 
 def test_reveal_answer(game_mgr):
@@ -111,13 +115,14 @@ def test_host_controls(game_mgr):
     # Reset game
     assert game_mgr.restart_game() is True
     assert game_mgr.state.status == "lobby"
-    assert len(game_mgr.state.players) == 1
-    assert game_mgr.state.players[0].score == 0
+    assert len(game_mgr.state.players) == 0
 
 
 def test_trap_question(game_mgr):
     game_mgr.join_player("p1", "Alice")
+    # Start game, Alice will be the active player
     game_mgr.start_game()
+    assert game_mgr.state.active_player_id == "p1"
 
     trap_q = None
     trap_qid = None
@@ -134,15 +139,12 @@ def test_trap_question(game_mgr):
     # Select trap question
     assert game_mgr.select_question(trap_qid) is True
 
-    # Alice buzzes in and answers correctly
-    assert game_mgr.buzz_in("p1") is True
-    assert game_mgr.mark_answer(correct=True) is True
-
-    # Score should be -400 because it's a trap
+    # Alice's score should instantly drop by 400 because she was the active player selecting it
     assert game_mgr.get_player("p1").score == -400
+    assert game_mgr.state.status == "revealed"
 
 
-def test_trap_question_incorrect(game_mgr):
+def test_trap_question_no_buzz(game_mgr):
     game_mgr.join_player("p1", "Alice")
     game_mgr.start_game()
 
@@ -154,8 +156,5 @@ def test_trap_question_incorrect(game_mgr):
                 break
 
     assert game_mgr.select_question(trap_qid) is True
-    assert game_mgr.buzz_in("p1") is True
-
-    # Alice answers incorrectly, should still lose 400 points
-    assert game_mgr.mark_answer(correct=False) is True
-    assert game_mgr.get_player("p1").score == -400
+    # Cannot buzz in on a trap question as it is already completed/revealed
+    assert game_mgr.buzz_in("p1") is False
